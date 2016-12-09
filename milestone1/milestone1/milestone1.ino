@@ -30,11 +30,17 @@ bool eWrite(byte *data, int size, int address=0) {
   return true;
 }
 
-void rStr() {
-  
+void serReadStr() {
+  String str = Serial.readString();
+  int len = str.length();
+  byte data[len];
+  for (int i = 0; i < len; i++) {
+    data[i] = (byte) str[i];
+  }
+  eWrite(data, len);
 }
 
-void wStr() {
+void serWriteStr() {
   
 }
 
@@ -57,7 +63,7 @@ void loop() {
   } while (c == 0);
   Serial.println('K');
   delay(2000);
-  if (c == 'P') rStr();
-  else if (c == 'G') wStr();
+  if (c == 'P') serReadStr();
+  else if (c == 'G') serWriteStr();
 
 }

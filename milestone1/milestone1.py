@@ -21,19 +21,17 @@ def establish_comm(ser, c_in, c_out):
 
 def put_str(ser, data):
     establish_comm(ser, 'K', 'P')
-    
-    return
+    print(str(ser.write(data)) + ' byte(s) written')
 
 def get_str(ser):
     establish_comm(ser, 'K', 'G')
-
-    return
 
 if __name__ == "__main__":
     ser = connect_ser();
     establish_comm(ser, 'K', '?')
 
-    put_str(ser, 'hello, world!')
+    s = raw_input('Type a message\n');
+    put_str(ser, s)
 
     ser.close()
     print('disconnected')
