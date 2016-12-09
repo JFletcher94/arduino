@@ -1,14 +1,16 @@
 #include <EEPROM.h>
 
-bool waitFor(char k, unsigned int pollTime=200, unsigned long timeOut=60e6) {
+char waitFor(char *k, int size, unsigned int pollTime=200, unsigned long timeOut=60e6) {
   unsigned long timeNow = micros();
   char c = 0;
-  while (c != k) {
+  int i = 0;
+  while (c != k[i]) {
     delayMicroseconds(pollTime);
-    if (micros() - timeNow > timeOut) return false;
     if (Serial.available()) c = Serial.read();
+    if (micros() - timeNow > timeOut) return 0;
+    if (++i >= size) i = 0;
   }
-  return true;
+  return k[i];
 }
 
 byte* eRead(int size=EEPROM.length(), int address=0) {
@@ -28,17 +30,34 @@ bool eWrite(byte *data, int size, int address=0) {
   return true;
 }
 
+void rStr() {
+  
+}
+
+void wStr() {
+  
+}
+
 void setup() {
   Serial.begin(9600); 
   pinMode(9, OUTPUT);
 
-  while (!waitFor('?'));
+  char k[1] = {'?'};
+  while (!waitFor(k, 1));
   Serial.println('K');
   delay(2000);
   
 }
 
 void loop() {
-  
+  char k[2] = {'P', 'G'};
+  char c = 0;
+  do {
+    c = waitFor(k, 2);
+  } while (c == 0);
+  Serial.println('K');
+  delay(2000);
+  if (c == 'P') rStr();
+  else if (c == 'G') wStr();
 
 }
