@@ -1,6 +1,7 @@
 #include <EEPROM.h>
 
 char waitFor(char *k, int size, unsigned int pollTime=200, unsigned long timeOut=60e6) {
+  //can wait for multiple inputs
   unsigned long timeNow = micros();
   char c = 0;
   int i = 0;
@@ -14,6 +15,7 @@ char waitFor(char *k, int size, unsigned int pollTime=200, unsigned long timeOut
 }
 
 byte* eRead(int size=EEPROM.length(), int address=0) {
+  //read EEPROM; all memory read as byte array
   if (size > EEPROM.length() - address) return 0;
   byte data[EEPROM.length()];
   for (int i = 0; i < size; i++) {
@@ -23,6 +25,7 @@ byte* eRead(int size=EEPROM.length(), int address=0) {
 }
 
 bool eWrite(byte *data, int size, int address=0) {
+  //write to EEPROM
   if (size - address > EEPROM.length()) return false;
   for (int i = 0; i < size; i++) {
     EEPROM.write(i+address, data[i]);
@@ -31,6 +34,7 @@ bool eWrite(byte *data, int size, int address=0) {
 }
 
 void eClear() {
+  //clear EEPROM ("empty" value is 255)
   Serial.begin(9600);
   for (int i = 0; i < EEPROM.length(); i++) {
     EEPROM.write(i, 255);
@@ -38,6 +42,9 @@ void eClear() {
 }
 
 void serReadStr() {
+  //read string from serial. Format:
+  //<x|x|...> 
+  //x represents 16 characters
   Serial.println("ser read start");
   delay(100);
   eClear();
@@ -58,10 +65,11 @@ void serReadStr() {
   for (int i = 0; i < len; i++) {
     data[i] = (byte) str[i];
   }
-  eWrite(data, len);
+  eWrite(data, len); //temporary, for milestone 1
 }
 
 void serWriteStr() {
+  //print string to Serial
   byte *data = eRead();
   char data2[EEPROM.length()];
   int i;
@@ -71,35 +79,37 @@ void serWriteStr() {
   }
   data2[i++] = 0;
   String str = ((String)data2).substring(0, i);
+  //all above temporary, for milestone 1
   str = "<" + str + ">";
   Serial.println(str);
 }
 
 void startup() {
+  //"reset" serial communication; read through buffer
   char k[1] = {'?'};
   while (!waitFor(k, 1));
   Serial.println('K');
-  //delay(2000);
 }
 
 void setup() {
   Serial.begin(9600); 
   pinMode(9, OUTPUT);
 
-  //startup();
+  startup();
   
 }
 
 void loop() {
-  startup();
-  char k[4] = {'~', 'P', 'G', 'Q'};
+  char k[4] = {'P', 'G', 'Q', '?'};
   char c = 0;
   while (c == 0) {
     c = waitFor(k, 4);
   } 
   Serial.print(c);
   Serial.print('K');
+  if (c == '?') return;
   if (c == 'P') serReadStr();
   else if (c == 'G') serWriteStr();
+  startup();
 
 }
