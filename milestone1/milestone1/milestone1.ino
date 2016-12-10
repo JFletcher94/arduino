@@ -39,8 +39,19 @@ void eClear() {
 
 void serReadStr() {
   eClear();
-  String str = Serial.readString();
-  int len = str.length();
+  String str = "";
+  char c = "";
+  while (c != '<') {
+    if (Serial.available()) c = Serial.read();
+  }
+  while (c != '>') {
+    if (Serial.available()) {
+      c = Serial.read();
+      if (c == '!') Serial.print('K');
+      else str += c;
+    }
+  }
+  int len = str.length() - 1;
   byte data[len];
   for (int i = 0; i < len; i++) {
     data[i] = (byte) str[i];
@@ -58,29 +69,34 @@ void serWriteStr() {
   }
   data2[i++] = 0;
   String str = ((String)data2).substring(0, i);
+  str = "<" + str + ">";
   Serial.println(str);
+}
+
+void startup() {
+  char k[1] = {'?'};
+  while (!waitFor(k, 1));
+  Serial.println('K');
+  delay(2000);
 }
 
 void setup() {
   Serial.begin(9600); 
   pinMode(9, OUTPUT);
 
-  char k[1] = {'?'};
-  while (!waitFor(k, 1));
-  Serial.println('K');
-  delay(2000);
+  startup();
   
 }
 
 void loop() {
-  char k[2] = {'P', 'G'};
+  char k[3] = {'P', 'G', 'Q'};
   char c = 0;
   do {
-    c = waitFor(k, 2);
+    c = waitFor(k, 3);
   } while (c == 0);
   Serial.println('K');
-  delay(2000);
   if (c == 'P') serReadStr();
   else if (c == 'G') serWriteStr();
+  else if (c == 'Q') startup();
 
 }
