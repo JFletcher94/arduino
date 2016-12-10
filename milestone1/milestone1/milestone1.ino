@@ -4,13 +4,13 @@ char waitFor(char *k, int size, unsigned int pollTime=200, unsigned long timeOut
   unsigned long timeNow = micros();
   char c = 0;
   int i = 0;
-  while (c != k[i]) {
+  for(;;) {
     delayMicroseconds(pollTime);
     if (Serial.available()) c = Serial.read();
+    if (c == k[i]) return c;
     if (micros() - timeNow > timeOut) return 0;
     if (++i >= size) i = 0;
   }
-  return k[i];
 }
 
 byte* eRead(int size=EEPROM.length(), int address=0) {
@@ -38,6 +38,8 @@ void eClear() {
 }
 
 void serReadStr() {
+  Serial.println("ser read start");
+  delay(100);
   eClear();
   String str = "";
   char c = "";
@@ -47,7 +49,7 @@ void serReadStr() {
   while (c != '>') {
     if (Serial.available()) {
       c = Serial.read();
-      if (c == '!') Serial.print('K');
+      if (c == '|') Serial.print('K');
       else str += c;
     }
   }
@@ -77,26 +79,27 @@ void startup() {
   char k[1] = {'?'};
   while (!waitFor(k, 1));
   Serial.println('K');
-  delay(2000);
+  //delay(2000);
 }
 
 void setup() {
   Serial.begin(9600); 
   pinMode(9, OUTPUT);
 
-  startup();
+  //startup();
   
 }
 
 void loop() {
-  char k[3] = {'P', 'G', 'Q'};
+  startup();
+  char k[4] = {'~', 'P', 'G', 'Q'};
   char c = 0;
-  do {
-    c = waitFor(k, 3);
-  } while (c == 0);
-  Serial.println('K');
+  while (c == 0) {
+    c = waitFor(k, 4);
+  } 
+  Serial.print(c);
+  Serial.print('K');
   if (c == 'P') serReadStr();
   else if (c == 'G') serWriteStr();
-  else if (c == 'Q') startup();
 
 }

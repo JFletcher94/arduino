@@ -15,7 +15,8 @@ def establish_comm(ser, c_in, c_out):
     s = ''
     while (s != c_in):
         ser.write(c_out)
-        s = ser.read(size=1)
+        time.sleep(0.01)
+        s = ser.read(size=1).rstrip()
 
 def put_str(ser, data):
     establish_comm(ser, 'K', 'P')
@@ -24,10 +25,11 @@ def put_str(ser, data):
 
     size = len(data)
     index = 0
+    num_bytes = 0
     while (index < size):
         chunk = data[index:index+16]
-        print(str(ser.write(chunk)) + ' byte(s) written')
-        ser.write('!')
+        num_bytes += ser.write(chunk)
+        ser.write('|')
         s = ''
         while (s != 'K'):
             s = ser.read(size=1)
@@ -35,13 +37,14 @@ def put_str(ser, data):
         index += 16
 
     ser.write('>')
-
+    print(str(num_bytes) + ' byte(s) written')
 
 def get_str(ser):
     establish_comm(ser, 'K', 'G')
     s = c = ''
     while (c != '<'):
-        c = ser.read(size=1)
+        if (ser.in_waiting):
+            c = ser.read(size=1)
         time.sleep(0.01)
     while (c != '>'):
         if (ser.in_waiting):
@@ -51,10 +54,9 @@ def get_str(ser):
 
 if __name__ == "__main__":
     ser = connect_ser();
-    establish_comm(ser, 'K', '?')
-
     c = ''
     while (c != 'q'):
+        establish_comm(ser, 'K', '?')
         c = raw_input('Read, Write or Quit?(r/w/q)\n');
         if (c == 'w'):
             s = raw_input('Write a message\n')
