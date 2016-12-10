@@ -1,10 +1,12 @@
 import time
 import serial
     
-sname = '/dev/ttyACM0'
-
+sname = '/dev/ttyACM0' 
+    #serial port name: machine-specific
+    #currently running Linux Mint 18
 
 def connect_ser():
+    '''establish serial connection'''
     ser = serial.Serial(sname, 9600)
     ser.timeout = 1
     print('connected to ' + sname)
@@ -12,6 +14,7 @@ def connect_ser():
     return ser
 
 def establish_comm(ser, c_in, c_out):
+    '''establish/syncronize communication'''
     s = ''
     while (s != c_in):
         ser.write(c_out)
@@ -19,10 +22,9 @@ def establish_comm(ser, c_in, c_out):
         s = ser.read(size=1).rstrip()
 
 def put_str(ser, data):
+    '''send string over serial'''
     establish_comm(ser, 'K', 'P')
-    
     ser.write('<')
-
     size = len(data)
     index = 0
     num_bytes = 0
@@ -35,11 +37,11 @@ def put_str(ser, data):
             s = ser.read(size=1)
             time.sleep(0.01)
         index += 16
-
     ser.write('>')
     print(str(num_bytes) + ' byte(s) written')
 
 def get_str(ser):
+    '''receive string over serial'''
     establish_comm(ser, 'K', 'G')
     s = c = ''
     while (c != '<'):
@@ -64,7 +66,7 @@ if __name__ == "__main__":
         elif (c == 'r'):
             s = get_str(ser)
             print(s)
-
     ser.write('Q')
     ser.close()
     print('disconnected')
+

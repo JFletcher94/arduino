@@ -107,7 +107,7 @@ void loop() {
   } 
   Serial.print(c);
   Serial.print('K');
-  if (c == '?') return;
+  if (c == '?') return; //re-sync communication if necessary
   if (c == 'P') serReadStr();
   else if (c == 'G') serWriteStr();
   startup();
