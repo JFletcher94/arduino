@@ -3,7 +3,7 @@ import serial
 import numpy as np
 import matplotlib.pyplot as plt
     
-ser = serial.Serial('COM3')
+ser = serial.Serial('COM3') //windows
 ser.timeout = 1
 time.sleep(2)
 
