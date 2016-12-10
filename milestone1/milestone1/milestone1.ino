@@ -30,7 +30,15 @@ bool eWrite(byte *data, int size, int address=0) {
   return true;
 }
 
+void eClear() {
+  Serial.begin(9600);
+  for (int i = 0; i < EEPROM.length(); i++) {
+    EEPROM.write(i, 255);
+  }
+}
+
 void serReadStr() {
+  eClear();
   String str = Serial.readString();
   int len = str.length();
   byte data[len];
@@ -41,7 +49,16 @@ void serReadStr() {
 }
 
 void serWriteStr() {
-  
+  byte *data = eRead();
+  char data2[EEPROM.length()];
+  int i;
+  for (i = 0; i < EEPROM.length(); i++) {
+    if ((int) data[i] == 255) break;
+    data2[i] = (char) data[i];
+  }
+  data2[i++] = 0;
+  String str = ((String)data2).substring(0, i);
+  Serial.println(str);
 }
 
 void setup() {
