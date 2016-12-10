@@ -7,7 +7,7 @@ kmax = 200;
 X = np.arange(kmax)
 Y = np.zeros(shape=(2, kmax))
     
-ser = serial.Serial('COM3')
+ser = serial.Serial('COM3') //windows
 ser.timeout = 1
 time.sleep(2)
 
