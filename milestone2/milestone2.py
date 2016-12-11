@@ -1,5 +1,6 @@
 import time
 import serial
+import sys
     
 sname = '/dev/ttyACM0' 
     #serial port name: machine-specific
@@ -9,7 +10,7 @@ def connect_ser():
     '''establish serial connection'''
     ser = serial.Serial(sname, 9600)
     ser.timeout = 1
-    print('connected to ' + sname)
+    sys.stderr.write('connected to ' + sname + '\n')
     time.sleep(2)
     return ser
 
@@ -38,7 +39,7 @@ def put_str(ser, data):
             time.sleep(0.01)
         index += 16
     ser.write('>')
-    print(str(num_bytes) + ' byte(s) written')
+    sys.stderr.write(str(num_bytes) + ' byte(s) written\n')
 
 def get_str(ser):
     '''receive string over serial'''
@@ -59,14 +60,16 @@ if __name__ == "__main__":
     c = ''
     while (c != 'q'):
         establish_comm(ser, 'K', '?')
-        c = raw_input('Read, Write or Quit?(r/w/q)\n');
+        sys.stderr.write('Read, Write or Quit? (r/w/q)\n')
+        c = raw_input()
         if (c == 'w'):
-            s = raw_input('Write a message\n')
+            sys.stderr.write('Write a message\n')
+            s = raw_input()
             put_str(ser, s)
         elif (c == 'r'):
             s = get_str(ser)
-            print(s)
+            sys.stdout.write(s + '\n')
     ser.write('Q')
     ser.close()
-    print('disconnected')
+    sys.stderr.write('disconnected\n')
 
