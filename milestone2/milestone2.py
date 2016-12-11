@@ -69,6 +69,7 @@ if __name__ == "__main__":
         elif (c == 'r'):
             s = get_str(ser)
             sys.stdout.write(s + '\n')
+            sys.stderr.write(s + '\n')
     ser.write('Q')
     ser.close()
     sys.stderr.write('disconnected\n')
