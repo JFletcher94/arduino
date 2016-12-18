@@ -1,4 +1,4 @@
-int p = 13; //port
+int p = 9; //port
 int len = 100; //length of morse unit
 
 void setup() {

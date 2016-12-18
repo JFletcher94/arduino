@@ -22,54 +22,81 @@ def establish_comm(ser, c_in, c_out):
         time.sleep(0.01)
         s = ser.read(size=1).rstrip()
 
-def put_str(ser, data):
+def ser_write(ser, data):
     '''send string over serial'''
-    establish_comm(ser, 'K', 'P')
-    ser.write('<')
+    ser.write('{')
     size = len(data)
     index = 0
-    num_bytes = 0
     while (index < size):
         chunk = data[index:index+16]
-        num_bytes += ser.write(chunk)
+        ser.write(chunk)
         ser.write('|')
         s = ''
         while (s != 'K'):
             s = ser.read(size=1)
             time.sleep(0.01)
         index += 16
-    ser.write('>')
-    sys.stderr.write(str(num_bytes) + ' byte(s) written\n')
+    ser.write('}')
 
-def get_str(ser):
+def ser_read(ser):
     '''receive string over serial'''
-    establish_comm(ser, 'K', 'G')
     s = c = ''
-    while (c != '<'):
+    while (c != '{'):
         if (ser.in_waiting):
             c = ser.read(size=1)
-        time.sleep(0.01)
-    while (c != '>'):
+    while (c != '}'):
         if (ser.in_waiting):
             c = ser.read(size=1)
             s += c
     return s[:-1]
+
+def get_str(ser, name):
+    '''decrypt file called name'''
+    f = open(name, 'r')
+    data = f.read().rstrip()
+    f.close()
+    establish_comm(ser, 'K', 'G')
+    ser_write(ser, data)
+    f = open(name, 'w')
+    f.write(ser_read(ser) + '\n')
+    f.close()
+    sys.stderr.write(name + ' decrypted\n')
+
+def put_str(ser, name):
+    '''encrypt file called name'''
+    f = open(name, 'r')
+    data = f.read().rstrip()
+    f.close()
+    data.replace('\n', ' ') #characters not supported
+    data.replace('{', '[')
+    data.replace('}', ']')
+    data.replace('|', '\\')
+    data.replace('~', '`')
+    establish_comm(ser, 'K', 'P')
+    ser_write(ser, data)
+    f = open(name, 'w')
+    f.write(ser_read(ser) + '\n')
+    f.close()
+    sys.stderr.write(name + ' encrypted\n')
 
 if __name__ == "__main__":
     ser = connect_ser();
     c = ''
     while (c != 'q'):
         establish_comm(ser, 'K', '?')
-        sys.stderr.write('Read, Write or Quit? (r/w/q)\n')
+        sys.stderr.write('Encrypt, Decrypt or Quit? (e/d/q)\n')
         c = raw_input()
-        if (c == 'w'):
-            sys.stderr.write('Write a message\n')
+        if (c == 'e'):
+            sys.stderr.write('This will destroy currently stored decryption key. Is that okay? (y/n)\n')
             s = raw_input()
-            put_str(ser, s)
-        elif (c == 'r'):
-            s = get_str(ser)
-            sys.stdout.write(s + '\n')
-            sys.stderr.write(s + '\n')
+            if (s == 'y'): 
+                sys.stderr.write('Enter filename\n')
+                s = raw_input()
+                put_str(ser, s)
+        elif (c == 'd'):
+            sys.stderr.write('Enter filename\n')
+            s = raw_input()
+            s = get_str(ser, s)
     ser.write('Q')
     ser.close()
     sys.stderr.write('disconnected\n')

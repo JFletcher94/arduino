@@ -1,4 +1,5 @@
 #include <EEPROM.h>
+const int EELEN = EEPROM.length();
 
 char waitFor(char *k, int size, unsigned int pollTime=200, unsigned long timeOut=60e6) {
   //can wait for multiple inputs
@@ -14,10 +15,10 @@ char waitFor(char *k, int size, unsigned int pollTime=200, unsigned long timeOut
   }
 }
 
-byte* eRead(int size=EEPROM.length(), int address=0) {
+byte* eRead(int size=EELEN, int address=0) {
   //read EEPROM; all memory read as byte array
-  if (size > EEPROM.length() - address) return 0;
-  byte data[EEPROM.length()];
+  if (size > EELEN - address) return 0;
+  byte data[EELEN];
   for (int i = 0; i < size; i++) {
     data[i] = EEPROM.read(i+address);
   }
@@ -26,7 +27,8 @@ byte* eRead(int size=EEPROM.length(), int address=0) {
 
 bool eWrite(byte *data, int size, int address=0) {
   //write to EEPROM
-  if (size - address > EEPROM.length()) return false;
+  if (size - address > EELEN) return false;
+  eClear();
   for (int i = 0; i < size; i++) {
     EEPROM.write(i+address, data[i]);
   }
@@ -35,60 +37,99 @@ bool eWrite(byte *data, int size, int address=0) {
 
 void eClear() {
   //clear EEPROM ("empty" value is 255)
-  Serial.begin(9600);
-  for (int i = 0; i < EEPROM.length(); i++) {
+  for (int i = 0; i < EELEN; i++) {
     EEPROM.write(i, 255);
   }
 }
 
-void serReadStr() {
+String serReadStr() {
   //read string from serial. Format:
-  //<x|x|...> 
-  //x represents 16 characters
-  Serial.println("ser read start");
+  //{x|y|...} 
+  //x, y represent 16 characters
   delay(100);
-  eClear();
   String str = "";
-  char c = "";
-  while (c != '<') {
+  char c = 0;
+  while (c != '{') {
     if (Serial.available()) c = Serial.read();
   }
-  while (c != '>') {
+  while (c != '}') {
     if (Serial.available()) {
       c = Serial.read();
       if (c == '|') Serial.print('K');
-      else str += c;
+      else if (c != '}') str += c;
     }
   }
-  int len = str.length() - 1;
-  byte data[len];
-  for (int i = 0; i < len; i++) {
-    data[i] = (byte) str[i];
-  }
-  eWrite(data, len); //temporary, for milestone 1
+  return str;
 }
 
-void serWriteStr() {
+void serWriteStr(String str) {
+  //prints string to Serial surrounded by { and }
+  Serial.print("{" + str + "}");
+}
+
+String getEEAsStr() {
   //print string to Serial
   byte *data = eRead();
-  String str = strFromByteArray(data);
-  str = "<" + str + ">";
-  Serial.println(str);
+  char data2[EELEN];
+  int i;
+  for (i = 0; i < EELEN; i++) {
+    if ((int) data[i] == 255) break;
+    data2[i] = (char) (data[i] + 32);
+  }
+  data2[i++] = 0;
+  return ((String)data2).substring(0, i);
 }
 
 String strFromByteArray(byte *data) {
   //get String from byte array;
   //because its main use is EEPROM, string limited
   //to EEPROM.length()
-  char data2[EEPROM.length()];
+  char data2[EELEN+1];
   int i;
-  for (i = 0; i < EEPROM.length(); i++) {
+  for (i = 0; i < EELEN; i++) {
     if ((int) data[i] == 255) break;
     data2[i] = (char) data[i];
   }
   data2[i++] = 0;
   String str = ((String)data2).substring(0, i);
   return str;
+}
+
+String encrypt(String str) {
+  //encrypt string using Vigenere cipher
+  //allowed ASCII range: 32 - 122 (space - z); size: 91
+  int len;
+  if (str.length() < EELEN) len = str.length();
+  else len = EELEN;
+  byte cypher[len];
+  char encrypted[str.length()+1];
+  for (int i = 0; i < len; i++) {
+    cypher[i] = random(91);
+  }
+  for (int i = 0; i < str.length(); i++) {
+    encrypted[i] = (str.charAt(i)-32 + cypher[i%len])%91 + 32;
+  }
+  encrypted[str.length()] = 0;
+  eWrite(cypher, len);
+  return (String) encrypted;
+}
+
+String decrypt(String str) {
+  //decrypt string using Vigenere cipher
+  //allowed ASCII range: 32 - 122 (space - z); size: 91
+  byte *data = eRead();
+  int i = 0;
+  while (data[i] != 255) {
+    i++;
+  }
+  if (i == 0) return "";
+  int len = str.length();
+  char decrypted[len+1];
+  for (int j = 0; j < len; j++) {
+    decrypted[j] = (char)((91 + str.charAt(j)-32 - data[j%i])%91 + 32);
+  }
+  decrypted[len] = 0;
+  return (String) decrypted;
 }
 
 void startup() {
@@ -100,8 +141,9 @@ void startup() {
 
 void setup() {
   Serial.begin(9600); 
+  randomSeed(analogRead(0));
+  
   pinMode(9, OUTPUT);
-
   startup();
   
 }
@@ -112,11 +154,10 @@ void loop() {
   while (c == 0) {
     c = waitFor(k, 4);
   } 
-  Serial.print(c);
   Serial.print('K');
   if (c == '?') return; //re-sync communication if necessary
-  if (c == 'P') serReadStr();
-  else if (c == 'G') serWriteStr();
+  if (c == 'P') serWriteStr(encrypt(serReadStr()));
+  else if (c == 'G') serWriteStr(decrypt(serReadStr()));
   startup();
 
 }

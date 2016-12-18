@@ -5,7 +5,7 @@ void setup() {
   int size = EEPROM.length();
   char data[size];
   for (int i = 0; i < size; i++) {
-    data[i] = (char) EEPROM.read(i);
+    data[i] = (char) (32+EEPROM.read(i));
   }
   Serial.print(data);
 }
