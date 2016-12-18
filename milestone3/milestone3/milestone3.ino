@@ -15,6 +15,58 @@ char waitFor(char *k, int size, unsigned int pollTime=200, unsigned long timeOut
   }
 }
 
+bool checkKillSwitch() {
+  //if box has been opened, erase EEPROM
+  int voltage = analogRead(A0);
+  if (voltage < 970 || voltage > 990) { //calibrated 
+    eClear();
+    return true;
+  }
+  return false;
+}
+
+bool goKeys() {
+  //checks for correct key turn sequence
+  char k[1] = {'K'};
+  while (!waitFor(k, 1));
+  Serial.println('K');
+  int a5;
+  int a4;
+  int a3;
+  int a2;
+  do {
+    delay(100);
+    if (checkKillSwitch()) return false;
+    a5 = analogRead(A5);
+    a4 = analogRead(A4);
+    a3 = analogRead(A3);
+    a2 = analogRead(A2);
+  } while (a5 > 10 || a4 > 10 || !(a3 > 650 && a3 < 750) || !(a2 > 650 && a2 < 750));
+  while (!waitFor(k, 1));
+  Serial.println('K');
+  do {
+    delay(100);
+    if (checkKillSwitch()) return false;
+    a5 = analogRead(A5);
+    a4 = analogRead(A4);
+    a3 = analogRead(A3);
+    a2 = analogRead(A2);
+  } while (!(a5 > 300 && a5 < 400)|| !(a4 > 300 && a4 < 400) || !(a3 > 300 && a3 < 400) || !(a2 > 300 && a2 < 400));
+  while (!waitFor(k, 1));
+  Serial.println('K');
+  do {
+    delay(100);
+    if (checkKillSwitch()) return false;
+    a5 = analogRead(A5);
+    a4 = analogRead(A4);
+    a3 = analogRead(A3);
+    a2 = analogRead(A2);
+  } while (a5 > 10 || a4 > 10 || a3 > 10 || a2 > 10);
+  while (!waitFor(k, 1));
+  Serial.println('K');
+  return true;
+}
+
 byte* eRead(int size=EELEN, int address=0) {
   //read EEPROM; all memory read as byte array
   if (size > EELEN - address) return 0;
@@ -98,6 +150,7 @@ String strFromByteArray(byte *data) {
 String encrypt(String str) {
   //encrypt string using Vigenere cipher
   //allowed ASCII range: 32 - 122 (space - z); size: 91
+  if (!goKeys()) return "";
   int len;
   if (str.length() < EELEN) len = str.length();
   else len = EELEN;
@@ -117,6 +170,7 @@ String encrypt(String str) {
 String decrypt(String str) {
   //decrypt string using Vigenere cipher
   //allowed ASCII range: 32 - 122 (space - z); size: 91
+  if (!goKeys()) return "";
   byte *data = eRead();
   int i = 0;
   while (data[i] != 255) {
@@ -140,12 +194,18 @@ void startup() {
 }
 
 void setup() {
-  Serial.begin(9600); 
-  randomSeed(analogRead(0));
-  
+  Serial.begin(9600);
   pinMode(9, OUTPUT);
-  startup();
+  digitalWrite(9, HIGH);
+  delay(50);
+  pinMode(10, OUTPUT);
+  digitalWrite(10, HIGH);
+  delay(50);
+  pinMode(8, OUTPUT);
+  digitalWrite(8, HIGH);
   
+  randomSeed(analogRead(0));
+  startup();
 }
 
 void loop() {
@@ -156,8 +216,14 @@ void loop() {
   } 
   Serial.print('K');
   if (c == '?') return; //re-sync communication if necessary
-  if (c == 'P') serWriteStr(encrypt(serReadStr()));
-  else if (c == 'G') serWriteStr(decrypt(serReadStr()));
+  if (c == 'P') {
+    if (checkKillSwitch()) Serial.print("|");
+    else serWriteStr(encrypt(serReadStr()));
+  }
+  else if (c == 'G') {
+    if (checkKillSwitch()) Serial.print("|");
+    else serWriteStr(decrypt(serReadStr()));
+  }
   startup();
 
 }

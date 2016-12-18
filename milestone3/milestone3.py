@@ -6,6 +6,11 @@ sname = '/dev/ttyACM0'
     #serial port name: machine-specific
     #currently running Linux Mint 18
 
+def kill():
+    '''terminate program if kill switch was flipped'''
+    sys.stderr.write('Tampering detected. Encryption key erased. Goodbye.\n')
+    sys.exit()
+
 def connect_ser():
     '''establish serial connection'''
     ser = serial.Serial(sname, 9600)
@@ -21,6 +26,8 @@ def establish_comm(ser, c_in, c_out):
         ser.write(c_out)
         time.sleep(0.01)
         s = ser.read(size=1).rstrip()
+        if (s == '|'):
+            kill()
 
 def ser_write(ser, data):
     '''send string over serial'''
@@ -34,6 +41,8 @@ def ser_write(ser, data):
         s = ''
         while (s != 'K'):
             s = ser.read(size=1)
+            if (s == '|'):
+                kill()
             time.sleep(0.01)
         index += 16
     ser.write('}')
@@ -44,9 +53,13 @@ def ser_read(ser):
     while (c != '{'):
         if (ser.in_waiting):
             c = ser.read(size=1)
+            if (c == '|'):
+                kill()
     while (c != '}'):
         if (ser.in_waiting):
             c = ser.read(size=1)
+            if (c == '|'):
+                kill()
             s += c
     return s[:-1]
 
@@ -57,6 +70,7 @@ def get_str(ser, name):
     f.close()
     establish_comm(ser, 'K', 'G')
     ser_write(ser, data)
+    go_keys()
     f = open(name, 'w')
     f.write(ser_read(ser) + '\n')
     f.close()
@@ -74,10 +88,23 @@ def put_str(ser, name):
     data.replace('~', '`')
     establish_comm(ser, 'K', 'P')
     ser_write(ser, data)
+    go_keys()
     f = open(name, 'w')
     f.write(ser_read(ser) + '\n')
     f.close()
     sys.stderr.write(name + ' encrypted\n')
+
+def go_keys():
+    '''guide user through key-turning process'''
+    establish_comm(ser, 'K', 'K')
+    sys.stderr.write('Please turn both keys to "Ready"\n')
+    establish_comm(ser, 'K', 'K')
+    sys.stderr.write('Please turn both keys to "Start"\n')
+    establish_comm(ser, 'K', 'K')
+    sys.stderr.write('Please turn both keys to "Off"\n')
+    establish_comm(ser, 'K', 'K')
+    sys.stderr.write('Keys accepted\n')
+    return
 
 if __name__ == "__main__":
     ser = connect_ser();
